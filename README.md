@@ -1,59 +1,70 @@
 # Virtual Memory Simulation
 
-> A Java-based simulation of **virtual memory, page replacement, and process memory access**.
+> Built to understand virtual memory by implementing the machinery — not just algorithms, but the coordination between scheduling, fault handling, and translation that a real kernel does every millisecond.
 
-This project explores how an operating system manages memory when multiple processes access virtual pages, with a focus on **page faults and page replacement**.
+---
 
-```text id="eb8k4m"
-Process Memory Access
-        ↓
-    Page Lookup
-        ↓
-   Page Fault?
-      /    \
-    No      Yes
-    │        │
-    │   Page Replacement
-    │        │
-    └────────┘
-        ↓
- Continue Execution
+## Memory View
+
+```
+PHYSICAL MEMORY (solid frames)
+┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐
+│Frame0│Frame1│Frame2│Frame3│Frame4│Frame5│Frame6│Frame7│ ...
+│ P1   │ P3   │ P1   │ P2   │ free │ P3   │ P1   │ free │
+└──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘
+   ▲       ▲       ▲       ▲       ▲       ▲       ▲       ▲
+   │       │       │       │       │       │       │       │
+   └───────┴───────┴───────┴───────┴───────┴───────┴───────┘
+                       │
+                       ▼ maps via page tables
+VIRTUAL MEMORY (dotted = per-process address space)
+
+  Process 1          Process 2          Process 3          Process N
+  ───────────        ───────────        ───────────        ───────────
+  VP 0 ──·····│──► Frame0
+  VP 1 ──·····│──► Frame2
+  VP 2 ──·····│──► Frame6
+  VP 3 ──·····│
+  ...                           ...                ...                ...
+
+Each process: 64-entry page table (VPN→PFN), initially all invalid ("0000000000000000")
 ```
 
-## Highlights
+---
 
-* Simulates **multiple processes and page accesses**
-* Models **page replacement using the Clock algorithm**
-* Includes two implementations:
+## Kernel Subsystems
 
-  * **Simple Clock**
-  * **Complex Clock**
-* Uses configurable input describing processes, read/write operations, and accessed locations
-* Compares replacement behavior through the resulting **page-fault count**
-
-The original experiments showed that, for larger inputs, the complex Clock implementation produced fewer page faults than the simple variant.
-
-## Project Structure
-
-```text id="h0cr9q"
-OS_clockSimple/     # Simple Clock replacement
-OS_ComplexClock/    # Complex Clock replacement
+```
+         ┌────────────────┬────────────────┐
+         ▼                ▼                ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│   SCHEDULER   │ │ PAGE FAULT    │ │    MMU        │
+│ • round-robin │ │ • Clock alg   │ │ • vaddr→paddr │
+│ • picks PID   │ │ • frame table │ │ • walks PTEs  │
+└───────────────┘ └───────────────┘ └───────────────┘
 ```
 
-Each version contains the Java sources needed to run that simulation.
+---
 
-## Input
+## Two Replacement Policies
 
-The simulator consumes records of the form:
+| Dir | Policy | Evicts |
+|-----|--------|--------|
+| `OS_clockSimple/` | Simple Clock | Oldest unreferenced |
+| `OS_ComplexClock/` | Complex Clock | Oldest unreferenced **clean** |
 
-```text id="3k2r1c"
-ProcessesNumber, Read/Write operation, Memory location
+---
+
+## Run (30 sec)
+
+```bash
+cd OS_clockSimple && javac *.java && java Main
+# memory size (4–16 KB) → input file
 ```
 
-For example, the input describes which process is accessing memory and where that access occurs.
+Outputs: scheduler picks, page faults, frame table, final fault count.
 
-## Why this project?
+---
 
-The project was built to understand the interaction between **virtual memory, page faults, page replacement, and process memory access** by implementing the mechanisms as an executable simulation rather than studying them only theoretically.
-
-**Abdus Salam Khazi · Abhishek A. R. · Abhishek Patil · Akshay Mallya**
+**Authors**: Abdus Salam Khazi · Abhishek A. R. · Abhishek Patil · Akshay Mallya  
+**Contact**: abduskhazi@gmail.com
